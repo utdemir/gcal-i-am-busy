@@ -1,6 +1,6 @@
 // To find your calendar id, see: https://docs.simplecalendar.io/find-google-calendar-id
 const SOURCE_CALENDAR_ID = "me@example.com"
-const TARGET_CALENDAR_ID = "g6chm915smquosbafropjoktpo@group.calendar.google.com"
+const TARGET_CALENDAR_ID = "foobarbaz@group.calendar.google.com"
 
 const TAG_NAME = "GCAL_I_AM_BUSY"
 const TAG_VALUE = "yes"
