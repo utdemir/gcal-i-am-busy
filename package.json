@@ -1,0 +1,14 @@
+{
+  "name": "gcal-i-am-busy",
+  "version": "0.1.0",
+  "description": "",
+  "dependencies": {},
+  "devDependencies": {
+    "@google/clasp": "^2.4.0",
+    "@types/google-apps-script": "^1.0.36",
+    "patch-package": "^6.4.7",
+    "typescript": "^4.3.5"
+  },
+  "author": "Utku Demir",
+  "license": "ISC"
+}
