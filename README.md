@@ -4,6 +4,22 @@ This Google Apps script creates "busy" events on a calendar based on another.
 
 I am using this to mark the events on my personal calendar as "busy" on my work calendar.
 
+## How it works
+
+It fetches events from `SOURCE_CALENDAR` between 2 weeks ago and 2
+months from now. Then fetches only the events with a specific tag from
+`TARGET_CALENDAR`, for the same interval. Then it figures out which
+events to insert to and delete from `TARGET_CALENDAR`, and applies them
+with the correct tag.
+
+I tried to make it hard for the code to mess with the existing events. So:
+
+* It only ever modifies `TARGET_CALENDAR`.
+* It can only modify/create events with a certain tag (`GCAL_I_AM_BUSY`).
+
+However, there are no tests or real world use (yet). So, use at your
+own risk. But do create an issue or send a PR if it does something wrong.
+
 ## Usage
 
 1. Edit `src/Code.ts` to update `SOURCE_CALENDAR_ID` and `TARGET_CALENDAR_ID`.
