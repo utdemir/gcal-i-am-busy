@@ -37,7 +37,7 @@ $ npx clasp create # when prompted, this is a 'standalone' script
 $ npx clasp push
 ```
 
-3. Navigate to https://script.google.com/home. You should see the project appear.
+3. Navigate to https://script.google.com/home. You should see the project appear, open it.
 4. Click 'Run'. It should ask for some permissions.
 5. Observe the "Execution log" until you see "Execution completed".
    * The initial run might take a while since it will synchronize 75 days of events.
