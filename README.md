@@ -6,15 +6,18 @@ I am using this to mark the events on my personal calendar as "busy" on my work 
 
 ## How it works
 
-It fetches events from `SOURCE_CALENDAR` between 2 weeks ago and 2
-months from now. Then fetches only the events with a specific tag from
-`TARGET_CALENDAR`, for the same interval. Then it figures out which
-events to insert to and delete from `TARGET_CALENDAR`, and applies them
+It fetches all events from `SOURCE_CALENDAR` between 2 weeks ago and 2
+months from now and events with a specific tag from `TARGET_CALENDAR`,
+for the same interval. Then it compares them to figure out which events
+to insert to and delete from `TARGET_CALENDAR`, and applies the changes
 with the correct tag.
 
-I tried to make it hard for the code to mess with the existing events. So:
+I tried to make it hard for the code to mess with the events it is not
+managing. So:
 
 * It only ever modifies `TARGET_CALENDAR`.
+* It only reads `startTime` and `endTime` fields from the events in
+  `SOURCE_CALENDAR`.
 * It can only modify/create events with a certain tag (`GCAL_I_AM_BUSY`).
 
 However, there are no tests or real world use (yet). So, use at your
