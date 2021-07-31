@@ -70,8 +70,9 @@ function main() {
 
   for(const event of toInsert) {
     Logger.log("Creating: " + JSON.stringify(event))
-    targetCal.createEvent("busy", event["startTime"], event["endTime"])
-      .setTag(TAG_NAME, TAG_VALUE)
+    const ev = targetCal.createEvent("busy", event["startTime"], event["endTime"])
+    ev.setTag(TAG_NAME, TAG_VALUE)
+    ev.removeAllReminders()
     Utilities.sleep(1000)
   }
   for(const event of toDelete) {
