@@ -49,6 +49,24 @@ $ npx clasp push
 
 [clasp]: https://github.com/google/clasp
 
+### Removing the events created by this script
+
+If you want to delete the events created with this script for some reason, here is a way to
+do that.
+
+1. Open the deployed scripts code on Google App Script page.
+2. Set the `DELETE_ALL` constant to `true`.
+3. Using the toolbar above:
+   1. Save the script
+   2. Set the function to run to "main"
+   3. Click the "Run" button.
+4. Watch the message box below until the script completes.
+
+* If you don't want to use the script anymore, don't forget to delete the project, or at least
+  disable the triggers.
+* If you want to use the script again, just set the constant back to `false`, or run `npx clasp push`
+  again.
+
 ## Disclaimer
 
 Don't blame me if this breaks. See [LICENSE.md](./LICENSE.md).

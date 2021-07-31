@@ -5,6 +5,11 @@ const TARGET_CALENDAR_ID = "foobarbaz@group.calendar.google.com"
 const TAG_NAME = "GCAL_I_AM_BUSY"
 const TAG_VALUE = "yes"
 
+// Set below to 'true' if you want to delete the events previous created by this script.
+// Just to clarify, this is *only* going to delete the events created by this script, it is
+// not going to clear the target calendar completely.
+const DELETE_ALL = false
+
 // BEGIN CODE
 
 const sourceCal = CalendarApp.getCalendarById(SOURCE_CALENDAR_ID)
@@ -25,6 +30,7 @@ const maxDate = new Date()
 maxDate.setDate(today.getDate() + 60)
 
 function transform(ev: Event): Event | null {
+  if(DELETE_ALL) return null
   // no need to preserve old events
   if(ev["endTime"] < yesterday) return null
   return ev
