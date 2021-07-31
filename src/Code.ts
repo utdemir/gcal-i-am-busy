@@ -15,22 +15,36 @@ if(targetCal == null) throw `Unknown target calendar: ${TARGET_CALENDAR_ID}`
 
 const today = new Date()
 
+const yesterday = new Date()
+yesterday.setDate(today.getDate() - 1)
+
 const minDate = new Date()
 minDate.setDate(today.getDate() - 15)
 
 const maxDate = new Date()
 maxDate.setDate(today.getDate() + 60)
 
+function transform(ev: Event): Event | null {
+  // no need to preserve old events
+  if(ev["endTime"] < yesterday) return null
+  return ev
+}
+
 type Event = { "startTime": Date, "endTime": Date }
 type ExistingEvent = { "startTime": Date, "endTime": Date, "delete": (() => void) }
 
 function main() {
   const sourceEvents: Event[] = (() => {
-    const evs =
-      sourceCal.getEvents(minDate, maxDate).map(event => ({
-        "startTime": event.getStartTime(),
-        "endTime": event.getEndTime()
-      }))
+    const evs: Event[] = []
+
+    sourceCal.getEvents(minDate, maxDate).map(ev => ({
+      "startTime": ev.getStartTime(),
+      "endTime": ev.getEndTime()
+    })).forEach (ev => {
+      const r = transform(ev)
+      if (r != null) evs.push(r)
+    })
+
     return evs
   }) ()
   Logger.log(`Found ${sourceEvents.length} events on the source calendar.`)
