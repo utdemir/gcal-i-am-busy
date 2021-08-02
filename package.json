@@ -4,10 +4,9 @@
   "description": "",
   "dependencies": {},
   "devDependencies": {
-    "@google/clasp": "^2.4.0",
-    "@types/google-apps-script": "^1.0.36",
-    "patch-package": "^6.4.7",
-    "typescript": "^4.3.5"
+    "@google/clasp": "2.4.0",
+    "@types/google-apps-script": "1.0.36",
+    "typescript": "4.3.5"
   },
   "author": "Utku Demir",
   "license": "ISC"
