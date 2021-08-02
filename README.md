@@ -47,6 +47,13 @@ $ npx clasp push
    * Event source: `Time-driven`
    * Set the time trigger and the interval as you wish. I have it on every 10 minutes.
 
+7. To redeploy after changes made to the typescript source:
+
+```
+$ npx tsc
+$ npx clasp push
+```
+
 [clasp]: https://github.com/google/clasp
 
 ### Removing the events created by this script
