@@ -29,13 +29,6 @@ minDate.setDate(today.getDate() - 15)
 const maxDate = new Date()
 maxDate.setDate(today.getDate() + 60)
 
-function transform(ev: Event): Event | null {
-  if(DELETE_ALL) return null
-  // no need to preserve old events
-  if(ev["endTime"] < yesterday) return null
-  return ev
-}
-
 type Event = { "startTime": Date, "endTime": Date }
 type ExistingEvent = { "startTime": Date, "endTime": Date, "delete": (() => void) }
 
@@ -47,8 +40,8 @@ function main() {
       "startTime": ev.getStartTime(),
       "endTime": ev.getEndTime()
     })).forEach (ev => {
-      const r = transform(ev)
-      if (r != null) evs.push(r)
+      const filtered = filter(ev)
+      if (filtered != null) evs.push(filtered)
     })
 
     return evs
@@ -92,6 +85,13 @@ function main() {
   }
 
   Logger.log("Done.")
+}
+
+function filter(ev: Event): Event | null {
+  if(DELETE_ALL) return null
+  // no need to preserve old events
+  if(ev["endTime"] < yesterday) return null
+  return ev
 }
 
 function partitionEvents(sourceEvents: Event[], existingEvents: ExistingEvent[]): [Event[], ExistingEvent[]] {
