@@ -3,6 +3,6 @@ pkgs = import (import ./nix/sources.nix).nixpkgs {};
 in
 pkgs.mkShell {
   buildInputs = [
-    pkgs.nodejs
+    pkgs.nodejs_latest
   ];
 }
