@@ -63,8 +63,9 @@ function main() {
            return ({
             "startTime": ev.getStartTime(),
             "endTime": ev.getEndTime(),
-            "isAllDay" : ev.isAllDayEvent(),
+            "isAllDay" : ev.isAllDayEvent() || (ev.getEndTime().getTime() - ev.getStartTime().getTime()) >= 43200000,
             "isBusyEvent" : (ev.getTag(TAG_NAME) == TAG_VALUE) || ev.getTitle == "Occupied",
+            "isAttending": ev.getMyStatus() == CalendarApp.GuestStatus.YES || ev.getMyStatus() == CalendarApp.GuestStatus.OWNER,
         }); }).forEach(function (ev) {
             const r = sourceFilter(ev);
             if (r != null)
@@ -120,8 +121,10 @@ function main() {
 function sourceFilter(ev) {
     if (DELETE_ALL)
         return null;
+    else if (!ev["isAttending"])
+        return null;
     // no need to preserve old events
-    if (ev["endTime"] < yesterday)
+    else if (ev["endTime"] < yesterday)
         return null;
     // don't bring over vacations etc., let them be created separately
     else if (ev["isAllDay"])
