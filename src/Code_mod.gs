@@ -29,12 +29,14 @@
          often is desired.
 */
 
-// To find your calendar id, see: https://docs.simplecalendar.io/find-google-calendar-id
+// See: https://docs.simplecalendar.io/find-google-calendar-id
 const SOURCE_CALENDAR_ID = "me@example.com";
-const TARGET_CALENDAR_ID = "me@somewhereelse.com";
-// Set below to 'true' if you want to delete the events previous created by this script.
-// Just to clarify, this is *only* going to delete the events created by this script, it is
-// set this to clear all of our created events from target calendar
+const TARGET_CALENDAR_ID = "foobarbaz@group.calendar.google.com";
+
+/* Set below to 'true' if you want to delete the events previous created by this
+ * script. This is *only* going to delete the events created by this script, not
+ * any others.
+ */
 const DELETE_ALL = false;
 
 // no need to touch these
@@ -49,10 +51,8 @@ const targetCal = CalendarApp.getCalendarById(TARGET_CALENDAR_ID);
 if (targetCal == null)
     throw "Unknown target calendar: " + TARGET_CALENDAR_ID;
 const today = new Date();
-const yesterday = new Date();
-yesterday.setDate(today.getDate() - 1);
 const minDate = new Date();
-minDate.setDate(today.getDate() - 15);
+minDate.setDate(today.getDate() - 7);
 const maxDate = new Date();
 maxDate.setDate(today.getDate() + 60);
 
@@ -60,37 +60,40 @@ function main() {
     const sourceEvents = (function () {
         var evs = [];
         sourceCal.getEvents(minDate, maxDate).map(function (ev) {
-           return ({
+          const evStatus = ev.getMyStatus();
+          return {
             "startTime": ev.getStartTime(),
             "endTime": ev.getEndTime(),
             "isAllDay" : ev.isAllDayEvent() || (ev.getEndTime().getTime() - ev.getStartTime().getTime()) >= 43200000,
-            "isBusyEvent" : (ev.getTag(TAG_NAME) == TAG_VALUE) || ev.getTitle == "Occupied",
-            "isAttending": ev.getMyStatus() == CalendarApp.GuestStatus.YES || ev.getMyStatus() == CalendarApp.GuestStatus.OWNER,
-        }); }).forEach(function (ev) {
-            const r = sourceFilter(ev);
-            if (r != null)
-                evs.push(r);
+            "isBusyEvent": (ev.getTag(TAG_NAME) == TAG_VALUE) || (ev.getTitle() == "Occupied"),
+            "isAttending": evStatus == null || evStatus == CalendarApp.GuestStatus.YES || evStatus == CalendarApp.GuestStatus.OWNER,
+        };
+    }).forEach(function (ev) {
+            const filtered = sourceFilter(ev);
+            if (filtered != null)
+                evs.push(filtered);
         });
         return evs;
     })();
-    const existingEvents = (function () {
+    const targetEvents = (function () {
         const evs = targetCal.getEvents(minDate, maxDate)
             .filter(function (ev) {
             return ev.getTag(TAG_NAME) == TAG_VALUE;
         }).map(function (event) {
           var startTime = event.getStartTime();
           startTime.setSeconds(0); // clear marker so will match with incoming
-           return ({
+           return {
             "startTime": startTime,
             "endTime": event.getEndTime(),
-            "delete": event.deleteEvent
-        }); });
-        return evs;
+            "delete": event.deleteEvent,
+        };
+      });
+      return evs;
     })();
-    Logger.log("Found " + existingEvents.length + " events on the target calendar.");
+    Logger.log("Found " + targetEvents.length + " events on the target calendar.");
     const mergedEvents = mergeOverlappingEvents(sourceEvents);
     Logger.log("Found " + sourceEvents.length + " events on the source calendar, " + mergedEvents.length + " after merge.");
-    var _a = partitionEvents(mergedEvents, existingEvents), toInsert = _a[0], toDelete = _a[1];
+    var _a = partitionEvents(mergedEvents, targetEvents), toInsert = _a[0], toDelete = _a[1];
     Logger.log("Found " + toInsert.length + " events to insert.");
     Logger.log("Found " + toDelete.length + " events to delete.");
     for (var _i = 0, toInsert_1 = toInsert; _i < toInsert_1.length; _i++) {
@@ -98,15 +101,15 @@ function main() {
         // set seconds so reverse sync can recognize this is a transferred event
         var startTime = event["startTime"];
         startTime.setTime(startTime.getTime() + 1000);
-        Logger.log("Creating busy event starting : " + startTime);
-        var ev = targetCal.createEvent("Occupied", startTime, event["endTime"]);
+        Logger.log("Creating busy event starting at: " + startTime);
+        const ev = targetCal.createEvent("Occupied", startTime, event["endTime"]);
         ev.setTag(TAG_NAME, TAG_VALUE);
         ev.removeAllReminders();
         Utilities.sleep(1000);
     }
     for (var _b = 0, toDelete_1 = toDelete; _b < toDelete_1.length; _b++) {
         var event = toDelete_1[_b];
-        Logger.log("Deleting: " + JSON.stringify(event));
+        Logger.log("Deleting event starting at: " + event["startTime"]);
         try {
             event["delete"]();
         }
@@ -124,7 +127,7 @@ function sourceFilter(ev) {
     else if (!ev["isAttending"])
         return null;
     // no need to preserve old events
-    else if (ev["endTime"] < yesterday)
+    else if (ev["endTime"] < minDate)
         return null;
     // don't bring over vacations etc., let them be created separately
     else if (ev["isAllDay"])
@@ -143,9 +146,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     return to;
 };
 
-function partitionEvents(sourceEvents, existingEvents) {
+function partitionEvents(sourceEvents, targetEvents) {
     var left = __spreadArray([], sourceEvents).sort(compareEvent);
-    var right = __spreadArray([], existingEvents).sort(compareEvent);
+    var right = __spreadArray([], targetEvents).sort(compareEvent);
     var onlyLeft = [];
     var onlyRight = [];
     while (left.length > 0 && right.length > 0) {
