@@ -36,6 +36,7 @@ type SourceEvent = { "startTime": GDate, "endTime": GDate, "isAllDay": boolean,
 type TargetEvent = { "startTime": GDate, "endTime": GDate, "delete": (() => void) }
 
 function main() {
+  Logger.log(`Considering date range ${minDate.toLocaleDateString()} to ${maxDate.toLocaleDateString()}.`)
   const sourceEvents: SourceEvent[] = (() => {
     var evs: SourceEvent[] = []
 
@@ -115,7 +116,6 @@ function sourceFilter(ev: SourceEvent): SourceEvent | null {
     // don't bring over events synced by us
     else if (ev["isBusyEvent"] || ev["startTime"].getSeconds() != 0)
         return null
-    Logger.log(`Passing source event at: ${ev["startTime"]}`)
     return ev
 }
 
