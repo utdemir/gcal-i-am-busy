@@ -1,16 +1,20 @@
-// To find your calendar id, see: https://docs.simplecalendar.io/find-google-calendar-id
+// Edit: https://docs.simplecalendar.io/find-google-calendar-id
 const SOURCE_CALENDAR_ID = "me@example.com"
 const TARGET_CALENDAR_ID = "foobarbaz@group.calendar.google.com"
 
+/* Set below to 'true' if you want to delete the events previous created by this
+ * script. This is *only* going to delete the events created by this script, not
+ * any others. */
+const DELETE_ALL = false
+
+
+// no need to touch these
 const TAG_NAME = "GCAL_I_AM_BUSY"
 const TAG_VALUE = "yes"
 
-// Set below to 'true' if you want to delete the events previous created by this script.
-// Just to clarify, this is *only* going to delete the events created by this script, it is
-// not going to clear the target calendar completely.
-const DELETE_ALL = false
-
 // BEGIN CODE
+
+type GDate = GoogleAppsScript.Base.Date
 
 const sourceCal = CalendarApp.getCalendarById(SOURCE_CALENDAR_ID)
 if(sourceCal == null) throw `Unknown source calendar: ${SOURCE_CALENDAR_ID}`
@@ -20,62 +24,73 @@ if(targetCal == null) throw `Unknown target calendar: ${TARGET_CALENDAR_ID}`
 
 const today = new Date()
 
-const yesterday = new Date()
-yesterday.setDate(today.getDate() - 1)
-
 const minDate = new Date()
-minDate.setDate(today.getDate() - 15)
+minDate.setDate(today.getDate() - 7)
 
 const maxDate = new Date()
 maxDate.setDate(today.getDate() + 60)
 
-type Event = { "startTime": Date, "endTime": Date }
-type ExistingEvent = { "startTime": Date, "endTime": Date, "delete": (() => void) }
+type Event = { "startTime": GDate, "endTime": GDate }
+type SourceEvent = { "startTime": GDate, "endTime": GDate, "isAllDay": boolean,
+		     "isBusyEvent": boolean, "isAttending": boolean }
+type TargetEvent = { "startTime": GDate, "endTime": GDate, "delete": (() => void) }
 
 function main() {
-  const sourceEvents: Event[] = (() => {
-    const evs: Event[] = []
+  Logger.log(`Considering date range ${minDate.toLocaleDateString()} to ${maxDate.toLocaleDateString()}.`)
+  const sourceEvents: SourceEvent[] = (() => {
+    var evs: SourceEvent[] = []
 
-    sourceCal.getEvents(minDate, maxDate).map(ev => ({
+    sourceCal.getEvents(minDate, maxDate).map(ev => {
+      const evStatus = ev.getMyStatus()
+      return {
       "startTime": ev.getStartTime(),
-      "endTime": ev.getEndTime()
-    })).forEach (ev => {
-      const filtered = filter(ev)
+      "endTime": ev.getEndTime(),
+      "isAllDay" : ev.isAllDayEvent() || (ev.getEndTime().getTime() - ev.getStartTime().getTime()) >= 43200000,
+      "isBusyEvent" : (ev.getTag(TAG_NAME) == TAG_VALUE) || (ev.getTitle() == "Occupied"),
+      "isAttending": evStatus == null || evStatus == CalendarApp.GuestStatus.YES || evStatus == CalendarApp.GuestStatus.OWNER,
+    }}).forEach (ev => {
+      const filtered = sourceFilter(ev)
       if (filtered != null) evs.push(filtered)
     })
 
     return evs
   }) ()
-  Logger.log(`Found ${sourceEvents.length} events on the source calendar.`)
 
-  const existingEvents: ExistingEvent[] = (() => {
+  const targetEvents: TargetEvent[] = (() => {
     const evs =
       targetCal.getEvents(minDate, maxDate)
         .filter(ev =>
            ev.getTag(TAG_NAME) == TAG_VALUE
-        ).map(event => ({
-          "startTime": event.getStartTime(),
+        ).map(event => {
+	  var startTime = event.getStartTime()
+          startTime.setSeconds(0)  // clear marker so will match with incoming
+	  return {
+          "startTime": startTime,
           "endTime": event.getEndTime(),
-          "delete": event.deleteEvent
-        }))
+          "delete": event.deleteEvent,
+        }})
     return evs
   }) ()
-  Logger.log(`Found ${existingEvents.length} events on the existing calendar.`)
+  Logger.log(`Found ${targetEvents.length} events on the target calendar.`)
 
   const mergedEvents = mergeOverlappingEvents(sourceEvents)
-  const [toInsert, toDelete] = partitionEvents(mergedEvents, existingEvents)
+  Logger.log(`Found ${sourceEvents.length} events on the source calendar, ${mergedEvents.length} after merge.`)
+  const [toInsert, toDelete] = partitionEvents(mergedEvents, targetEvents)
   Logger.log(`Found ${toInsert.length} events to insert.`)
   Logger.log(`Found ${toDelete.length} events to delete.`)
 
   for(const event of toInsert) {
-    Logger.log("Creating: " + JSON.stringify(event))
-    const ev = targetCal.createEvent("busy", event["startTime"], event["endTime"])
+    // set seconds so reverse sync can recognize this is a transferred event
+    var startTime = event["startTime"]
+    startTime.setTime(startTime.getTime() + 41000)
+    Logger.log(`Creating busy event starting at: ${startTime}`)
+    const ev = targetCal.createEvent("Occupied", startTime, event["endTime"])
     ev.setTag(TAG_NAME, TAG_VALUE)
     ev.removeAllReminders()
     Utilities.sleep(1000)
   }
   for(const event of toDelete) {
-    Logger.log("Deleting: " + JSON.stringify(event))
+    Logger.log(`Deleting event starting at: ${event["startTime"]}`)
     try {
       event["delete"]()
     } catch {
@@ -87,19 +102,29 @@ function main() {
   Logger.log("Done.")
 }
 
-function filter(ev: Event): Event | null {
-  if(DELETE_ALL) return null
-  // no need to preserve old events
-  if(ev["endTime"] < yesterday) return null
-  return ev
+function sourceFilter(ev: SourceEvent): SourceEvent | null {
+    if (DELETE_ALL)
+        return null
+    else if (!ev["isAttending"])
+        return null
+    // no need to preserve old events
+    else if (ev["endTime"] < minDate)
+        return null
+    // don't bring over vacations etc., let them be created separately
+    else if (ev["isAllDay"])
+        return null
+    // don't bring over events synced by us
+    else if (ev["isBusyEvent"] || ev["startTime"].getSeconds() == 41)
+        return null
+    return ev
 }
 
-function partitionEvents(sourceEvents: Event[], existingEvents: ExistingEvent[]): [Event[], ExistingEvent[]] {
+function partitionEvents(sourceEvents: SourceEvent[], targetEvents: TargetEvent[]): [SourceEvent[], TargetEvent[]] {
   let left = [...sourceEvents].sort(compareEvent)
-  let right = [...existingEvents].sort(compareEvent)
+  let right = [...targetEvents].sort(compareEvent)
 
-  let onlyLeft: Event[] = []
-  let onlyRight: ExistingEvent[] = []
+  let onlyLeft: SourceEvent[] = []
+  let onlyRight: TargetEvent[] = []
 
   while(left.length > 0 && right.length > 0) {
     if(left[0]["startTime"].getTime() == right[0]["startTime"].getTime()) {
@@ -126,7 +151,7 @@ function partitionEvents(sourceEvents: Event[], existingEvents: ExistingEvent[])
 
 // Utils
 
-function mergeOverlappingEvents(evs: Event[]): Event[] {
+function mergeOverlappingEvents(evs: SourceEvent[]): SourceEvent[] {
     var sorted = [...evs].sort(compareEvent)
 
     var i = 0
