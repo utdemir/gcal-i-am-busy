@@ -82,7 +82,7 @@ function main() {
   for(const event of toInsert) {
     // set seconds so reverse sync can recognize this is a transferred event
     var startTime = event["startTime"]
-    startTime.setTime(startTime.getTime() + 1000)
+    startTime.setTime(startTime.getTime() + 41000)
     Logger.log(`Creating busy event starting at: ${startTime}`)
     const ev = targetCal.createEvent("Occupied", startTime, event["endTime"])
     ev.setTag(TAG_NAME, TAG_VALUE)
@@ -114,7 +114,7 @@ function sourceFilter(ev: SourceEvent): SourceEvent | null {
     else if (ev["isAllDay"])
         return null
     // don't bring over events synced by us
-    else if (ev["isBusyEvent"] || ev["startTime"].getSeconds() != 0)
+    else if (ev["isBusyEvent"] || ev["startTime"].getSeconds() == 41)
         return null
     return ev
 }

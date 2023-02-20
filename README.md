@@ -27,13 +27,16 @@ own risk. But do create an issue or send a PR if it does something wrong.
 ## Bidirectional syncing
 
 It's possible to use this script on both sides of a pair of calendars shared
-to one another to synchronize bidirectionally. In this case the script tries
-to make sure it doesn't sync events it itself has generated. It will look for
-its `GCAL_I_AM_BUSY` tag, but if the foreign calendar is set to share only
-busy/free (start/end times of confirmed events), the tag will not be
-visible. For this reason, it sets the `seconds` field of the start time of
-events it creates to 1 second, and will not sync any events that have a
-nonzero seconds field.
+to one another to synchronize bidirectionally. Just deploy it (as described
+below) to both places, with source and target calendar IDs swapped.
+
+The script is designed to make sure it doesn't sync events it itself has
+generated on the other side. It will look for its `GCAL_I_AM_BUSY` tag, but if
+the foreign calendar is set to share only busy/free (start/end times of
+confirmed events), the tag will not be visible. For this reason, it sets the
+`seconds` field of the start time of events it creates to 41 seconds (a value
+picked for unlikelihood of occurring by chance), and will not sync any events
+that have a seconds field set to this value.
 
 ## Usage
 
